@@ -624,9 +624,9 @@ function updateBuildInstruction(){
   const el=document.getElementById('buildInstruction');
   if(!el)return;
   if(currentLevel>=3){
-    el.innerHTML='Place the remaining electrons <strong>one at a time</strong> by tapping the circles around each atom. Each side can hold up to 2 electrons. Put one electron on each open side before pairing electrons on a side. When the tally reaches 0, check the duet/octet counts. If an atom is still short, <strong>select one bonded atom, then select the atom it is already bonded to</strong>. Selecting the same bonded pair again converts available nonbonding electrons into another shared pair and adds another bond line. Repeat the same pair once more if a triple bond is needed. The total electron count does not change because the electrons are being rearranged, not added. The faint overlapping circles show that a shared bond counts for <strong>both</strong> bonded atoms.';
+    el.innerHTML='Place the remaining electrons <strong>one at a time</strong> by tapping the circles around each atom. Each side can hold up to 2 electrons. You may place an electron on a new side or tap the second circle on a side to make a lone pair. When the tally reaches 0, check the duet/octet counts. If two unpaired nonbonding electrons remain on the same atom and should form a lone pair, tap the empty circle beside one of them; the other electron will move over without changing the total. If an atom is still short, <strong>select one bonded atom, then select the atom it is already bonded to</strong>. Selecting the same bonded pair again converts available nonbonding electrons into another shared pair and adds another bond line. Repeat the same pair once more if a triple bond is needed. The total electron count does not change because the electrons are being rearranged, not added. The faint overlapping circles show that a shared bond counts for <strong>both</strong> bonded atoms.';
   }else{
-    el.innerHTML='Place the remaining electrons <strong>one at a time</strong> by tapping the circles around each atom. Each side can hold up to 2 electrons. Put one electron on each open side before pairing electrons on a side. When the tally reaches 0, check the duet/octet counts. The faint overlapping circles show that a shared bond counts for <strong>both</strong> bonded atoms.';
+    el.innerHTML='Place the remaining electrons <strong>one at a time</strong> by tapping the circles around each atom. Each side can hold up to 2 electrons. You may place an electron on a new side or tap the second circle on a side to make a lone pair. When the tally reaches 0, check the duet/octet counts. If two unpaired nonbonding electrons remain on the same atom and should form a lone pair, tap the empty circle beside one of them; the other electron will move over without changing the total. The faint overlapping circles show that a shared bond counts for <strong>both</strong> bonded atoms.';
   }
 }
 function buildSelectionNote(){
@@ -635,7 +635,7 @@ function buildSelectionNote(){
   if(currentLevel<3)return 'Each filled circle is one nonbonding electron. The faint overlapping circles show how each shared bond counts for both bonded atoms.';
   if(rem>0)return 'Each filled circle is one nonbonding electron. Finish accounting for the remaining electrons before deciding whether another shared pair is needed.';
   if(state.selectedBuild!==null)return accessibleAtomName(state.selectedBuild)+' selected. Now select an atom already bonded to it to add another shared pair between that pair.';
-  if(under)return 'All valence electrons are accounted for, but at least one atom is still short. Select one bonded atom, then the atom it is already bonded to, to try adding another shared pair.';
+  if(under)return 'All valence electrons are accounted for. First pair any remaining unpaired nonbonding electrons that belong together. If an atom is still short after that, select one bonded atom, then the atom it is already bonded to, to try adding another shared pair.';
   return 'All valence electrons are accounted for. Check each atom’s duet/octet before checking your structure.';
 }
 function buildAtomsCanAddBond(){
@@ -840,18 +840,29 @@ function handleElectronClick(uid,dir,index,allowed){
     return;
   }
   if(current>=2)return;
+
+  // When every electron is already accounted for, allow students to rearrange
+  // two singly placed nonbonding electrons on the SAME atom into a lone pair.
+  // This changes placement only; it does not change the molecule's electron total.
   if(remainingElectrons()<=0){
-    feedback('feedbackBox','bad','All valence electrons are already accounted for. Check the duet/octet counts. If an atom is still short, select one bonded atom and then the atom it is already bonded to to create another shared pair.');
+    if(current===1){
+      const otherSingle=openDirectionsForAtom(uid).find(d=>d!==dir&&(atom.lone[d]||0)===1);
+      if(otherSingle!==undefined){
+        atom.lone[otherSingle]-=1;
+        atom.lone[dir]=2;
+        state.showStabilityOverlay=false;
+        feedback('feedbackBox','good','One nonbonding electron moved to pair with the other electron on '+atom.symbol+'. The total electron count did not change.');
+        renderBuild();
+        return;
+      }
+    }
+    feedback('feedbackBox','bad','All valence electrons are already accounted for. To rearrange two unpaired electrons on the same atom into a lone pair, tap the empty circle beside one of those single electrons. If an atom is still short after the nonbonding electrons are paired, select one bonded atom and then the atom it is already bonded to to create another shared pair.');
     return;
   }
-  if(current===1){
-    const openDirs=openDirectionsForAtom(uid);
-    const emptySide=openDirs.find(d=>(atom.lone[d]||0)===0);
-    if(emptySide){
-      feedback('feedbackBox','info','Use the Lewis-dot pattern: place one electron on each open side of '+atom.symbol+' before pairing two electrons on the same side.');
-      return;
-    }
-  }
+
+  // During initial placement, students may add each electron to any available
+  // nonbonding position, up to two electrons per side. The fixed tally prevents
+  // creating extra electrons, so there is no need to force a one-per-side pattern.
   atom.lone[dir]=current+1;
   state.showStabilityOverlay=false;
   renderBuild();
@@ -956,7 +967,7 @@ function checkStructure(){
   }
   const unpaired=state.atoms.find(a=>DIRS.some(d=>(a.lone[d]||0)===1));
   if(unpaired){
-    feedback('feedbackBox','info',unpaired.symbol+' still has an unpaired nonbonding electron. In the molecules used in this practice, the finished Lewis structure should pair those electrons through a lone pair or an additional shared bond.');
+    feedback('feedbackBox','info',unpaired.symbol+' still has an unpaired nonbonding electron. If another unpaired electron is on the same atom, tap the empty circle beside one of them to form a lone pair without changing the total electron count. If the atom is still short after pairing its nonbonding electrons, consider whether another shared bond is needed.');
     return;
   }
   state.selectedBuild=null;
@@ -1097,7 +1108,7 @@ document.getElementById('btnResetWorkspace').addEventListener('click',resetBuild
 document.getElementById('btnHint').addEventListener('click',()=>{
   const box=document.getElementById('hintBox');
   let text;
-  if(remainingElectrons()>0)text='You still have electrons available. Place them one at a time, usually on terminal atoms first. Put one electron on each open side of an atom before pairing, and keep hydrogen to a duet.';
+  if(remainingElectrons()>0)text='You still have electrons available. Place them one at a time, usually on terminal atoms first. Each side can hold up to two electrons, so you may add a second electron to make a lone pair. Keep hydrogen to a duet.';
   else{
     const under=state.atoms.find(a=>atomElectrons(a.uid)<targetElectrons(a));
     text=under?'All electrons are accounted for, but '+under.symbol+' is still short. Look for singly placed electrons on bonded atoms or a neighboring lone pair that can become another shared pair. Select one atom in that bond, then select the atom it is already bonded to. For a triple bond, repeat the same bonded pair again if another shared pair is still needed.':'Use the electron counts shown under each atom to check the duet/octet and the tally above to verify the total.';
