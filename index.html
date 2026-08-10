@@ -118,6 +118,8 @@ button.atom-node:hover{box-shadow:0 0 0 4px rgba(255,198,39,.18),0 1px 3px rgba(
 .stability-shell.target-2{width:184px;height:184px}
 .stability-shell.target-8{width:236px;height:236px}
 .stability-shell.hidden{display:none}
+.stability-shell-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible}
+.stability-shell-path{vector-effect:non-scaling-stroke}
 .completion-hidden{display:none !important}
 .stable-label{position:absolute;left:50%;top:calc(100% + 18px);transform:translateX(-50%);font-size:.72rem;font-weight:700;color:var(--good);background:rgba(228,243,239,.98);padding:1px 8px;border-radius:999px;z-index:6;white-space:nowrap}
 .phase-card.locked .skeleton-canvas{pointer-events:none;opacity:.96}
@@ -699,6 +701,106 @@ function lonePairGeometry(dir){
   if(dir==='E')return {cx:edgeOffset,cy:0,hw:verticalHalfW,hh:verticalHalfH};
   return {cx:-edgeOffset,cy:0,hw:verticalHalfW,hh:verticalHalfH};
 }
+function shellStrokeWidth(){
+  return window.innerWidth<=430?3.2:4;
+}
+function shellBondHalfWidth(){
+  return window.innerWidth<=430?19:17;
+}
+function sampleCirclePoints(center,r,steps=16){
+  const pts=[];
+  for(let i=0;i<steps;i++){
+    const ang=(Math.PI*2*i)/steps;
+    pts.push({x:center.x+Math.cos(ang)*r,y:center.y+Math.sin(ang)*r});
+  }
+  return pts;
+}
+function sampleRectPoints(cx,cy,hw,hh,pad=8){
+  const x1=cx-hw-pad,x2=cx+hw+pad,y1=cy-hh-pad,y2=cy+hh+pad;
+  return [
+    {x:x1,y:y1},{x:(x1+x2)/2,y:y1},{x:x2,y:y1},{x:x2,y:(y1+y2)/2},
+    {x:x2,y:y2},{x:(x1+x2)/2,y:y2},{x:x1,y:y2},{x:x1,y:(y1+y2)/2}
+  ];
+}
+function sampleCapsulePoints(start,end,halfW){
+  const dx=end.x-start.x,dy=end.y-start.y,len=Math.hypot(dx,dy)||1;
+  const ux=dx/len,uy=dy/len,px=-uy,py=ux;
+  const pts=[
+    {x:start.x+px*halfW,y:start.y+py*halfW},
+    {x:start.x-px*halfW,y:start.y-py*halfW},
+    {x:end.x+px*halfW,y:end.y+py*halfW},
+    {x:end.x-px*halfW,y:end.y-py*halfW}
+  ];
+  for(let i=0;i<8;i++){
+    const ang=(Math.PI*2*i)/8;
+    pts.push({x:end.x+Math.cos(ang)*halfW,y:end.y+Math.sin(ang)*halfW});
+  }
+  return pts;
+}
+function convexHull(points){
+  if(points.length<=1)return points.slice();
+  const pts=points.slice().sort((a,b)=>a.x===b.x?a.y-b.y:a.x-b.x);
+  const cross=(o,a,b)=>((a.x-o.x)*(b.y-o.y))-((a.y-o.y)*(b.x-o.x));
+  const lower=[];
+  pts.forEach(p=>{
+    while(lower.length>=2 && cross(lower[lower.length-2],lower[lower.length-1],p)<=0)lower.pop();
+    lower.push(p);
+  });
+  const upper=[];
+  pts.slice().reverse().forEach(p=>{
+    while(upper.length>=2 && cross(upper[upper.length-2],upper[upper.length-1],p)<=0)upper.pop();
+    upper.push(p);
+  });
+  lower.pop();
+  upper.pop();
+  return lower.concat(upper);
+}
+function roundedHullPath(points,radius=18){
+  if(points.length<3)return '';
+  const n=points.length;
+  const dist=(a,b)=>Math.hypot(b.x-a.x,b.y-a.y);
+  const unit=(a,b)=>{const d=dist(a,b)||1;return {x:(b.x-a.x)/d,y:(b.y-a.y)/d};};
+  let d='';
+  for(let i=0;i<n;i++){
+    const prev=points[(i-1+n)%n],curr=points[i],next=points[(i+1)%n];
+    const inVec=unit(curr,prev),outVec=unit(curr,next);
+    const r=Math.min(radius,dist(curr,prev)/2,dist(curr,next)/2);
+    const p1={x:curr.x+inVec.x*r,y:curr.y+inVec.y*r};
+    const p2={x:curr.x+outVec.x*r,y:curr.y+outVec.y*r};
+    if(i===0)d='M'+p1.x.toFixed(1)+' '+p1.y.toFixed(1);
+    else d+=' L'+p1.x.toFixed(1)+' '+p1.y.toFixed(1);
+    d+=' Q'+curr.x.toFixed(1)+' '+curr.y.toFixed(1)+' '+p2.x.toFixed(1)+' '+p2.y.toFixed(1);
+  }
+  return d+' Z';
+}
+function stabilityShapePath(uid,positions,hostW,hostH){
+  const atom=state.atoms.find(a=>a.uid===uid);
+  const center={x:positions[uid].x*hostW/100,y:positions[uid].y*hostH/100};
+  const nodeRadius=currentAtomNodeRadius();
+  const coreRadius=nodeRadius+18;
+  const points=[...sampleCirclePoints(center,coreRadius,18)];
+  const occupied=occupiedDirections(uid,positions);
+  if(atom.symbol!=='H'){
+    DIRS.forEach(dir=>{
+      if(occupied.has(dir))return;
+      const g=lonePairGeometry(dir);
+      points.push(...sampleRectPoints(center.x+g.cx,center.y+g.cy,g.hw,g.hh,8));
+    });
+  }
+  state.chosenEdges.forEach(([a,b])=>{
+    const other=a===uid?b:(b===uid?a:null);
+    if(other===null)return;
+    const otherCenter={x:positions[other].x*hostW/100,y:positions[other].y*hostH/100};
+    const dx=otherCenter.x-center.x,dy=otherCenter.y-center.y,len=Math.hypot(dx,dy)||1;
+    const ux=dx/len,uy=dy/len;
+    const start={x:center.x+ux*(nodeRadius-4),y:center.y+uy*(nodeRadius-4)};
+    const endPadding=nodeRadius+12;
+    const end={x:otherCenter.x-ux*endPadding,y:otherCenter.y-uy*endPadding};
+    points.push(...sampleCapsulePoints(start,end,shellBondHalfWidth()));
+  });
+  const hull=convexHull(points);
+  return roundedHullPath(hull,window.innerWidth<=430?16:18);
+}
 function shellDiameterForAtom(uid,positions,hostW,hostH){
   const atom=state.atoms.find(a=>a.uid===uid);
   const center={x:positions[uid].x*hostW/100,y:positions[uid].y*hostH/100};
@@ -799,22 +901,28 @@ function renderBuild(){
   const positions=layoutPositions();
   const hostW=host.clientWidth||620, hostH=host.clientHeight||500;
 
-  state.atoms.forEach(atom=>{
-    const c=stabilityCenter(atom.uid,positions);
-    const shell=document.createElement('div');
-    const target=targetElectrons(atom);
-    shell.className='stability-shell '+(target===2?'h target-2':'target-8')+(state.showStabilityOverlay?'':' hidden');
-    const shellPal=elementPalette(atom.symbol);
-    const diameter=shellDiameterForAtom(atom.uid,positions,hostW,hostH);
-    shell.style.borderColor=shellPal.shellBorder;
-    shell.style.background=shellPal.shellFill;
-    shell.style.left=c.x+'%';
-    shell.style.top=c.y+'%';
-    shell.style.width=diameter+'px';
-    shell.style.height=diameter+'px';
-    shell.setAttribute('aria-hidden','true');
-    host.appendChild(shell);
-  });
+  if(state.showStabilityOverlay){
+    const shellSvg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    shellSvg.setAttribute('class','stability-shell-svg');
+    shellSvg.setAttribute('viewBox','0 0 '+hostW+' '+hostH);
+    shellSvg.setAttribute('preserveAspectRatio','none');
+    shellSvg.setAttribute('aria-hidden','true');
+    state.atoms.forEach(atom=>{
+      const d=stabilityShapePath(atom.uid,positions,hostW,hostH);
+      if(!d)return;
+      const pal=elementPalette(atom.symbol);
+      const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+      path.setAttribute('class','stability-shell-path');
+      path.setAttribute('d',d);
+      path.setAttribute('fill',pal.shellFill);
+      path.setAttribute('stroke',pal.shellBorder);
+      path.setAttribute('stroke-width',shellStrokeWidth());
+      path.setAttribute('stroke-linejoin','round');
+      path.setAttribute('stroke-linecap','round');
+      shellSvg.appendChild(path);
+    });
+    host.appendChild(shellSvg);
+  }
 
   state.chosenEdges.forEach(([a,b])=>{
     const p1=positions[a],p2=positions[b];
