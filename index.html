@@ -47,6 +47,16 @@ main{max-width:940px;margin:0 auto;padding:20px 16px 60px}
 .framing-kicker{font-family:var(--display);font-weight:700;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--maroon);margin:0 0 8px}
 .framing-text{font-size:1rem;line-height:1.55;margin:0 0 10px}.framing-text:last-child{margin-bottom:0}.framing-text strong{color:var(--maroon)}
 .step-list{margin:10px 0 0;padding-left:22px;color:var(--ink-soft);font-size:.93rem;line-height:1.7}.step-list strong{color:var(--ink)}
+.practice-level-intro{color:var(--ink-soft);font-size:.92rem;margin:0 0 14px}
+.practice-level-flow{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr);align-items:stretch;gap:10px;margin:14px 0}
+.practice-level-card{background:#FCFAF7;border:1.5px solid var(--line);border-radius:12px;padding:14px 12px;min-width:0;position:relative;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+.practice-level-card::before{content:'';position:absolute;left:-1.5px;top:12px;bottom:12px;width:4px;border-radius:4px;background:var(--gold)}
+.practice-level-number{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:28px;padding:0 9px;border-radius:999px;background:#FBEFF3;color:var(--maroon);font-family:var(--display);font-weight:700;font-size:.76rem;letter-spacing:.03em;text-transform:uppercase;margin-bottom:7px}
+.practice-level-card h4{font-size:.92rem;color:var(--ink);margin:0 0 3px}
+.practice-level-card p{margin:0;color:var(--ink-soft);font-size:.82rem;line-height:1.4}
+.practice-level-arrow{display:flex;align-items:center;justify-content:center;color:var(--maroon);font-family:var(--display);font-size:1.55rem;font-weight:700;padding:0 2px}
+.practice-level-steps{margin:12px 0 16px;padding:10px 12px;background:#FFF7E0;border:1px solid #F0DBA0;border-radius:10px;color:var(--ink-soft);font-size:.86rem;line-height:1.5}
+.practice-level-steps strong{color:var(--maroon-dark)}
 .level-badge{display:inline-flex;align-items:center;font-family:var(--display);font-weight:700;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--maroon);background:#FBEFF3;border-radius:999px;padding:5px 12px}
 .mol-title{font-family:var(--mono);font-size:1.6rem;font-weight:600;color:var(--maroon-dark)}.mol-name{color:var(--ink-soft);font-size:.92rem;margin-top:2px}
 .phase-card{margin-top:18px;padding-top:18px;border-top:1px solid var(--line)}.phase-card:first-of-type{border-top:0;padding-top:0}
@@ -121,6 +131,7 @@ button.atom-node:hover{box-shadow:0 0 0 4px rgba(255,198,39,.18),0 1px 3px rgba(
 .modal-box{background:var(--panel);border-radius:var(--radius);padding:24px;max-width:460px;width:100%;max-height:94vh;overflow-y:auto}.modal-box-wide{max-width:1100px;width:96vw}.modal-btn-row{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}.accessible-table{width:100%;border-collapse:collapse;margin-top:16px;font-size:.9rem}.accessible-table caption{text-align:left;font-weight:700;margin-bottom:8px}.accessible-table th,.accessible-table td{border:1px solid var(--line);padding:8px;text-align:left}.accessible-table th{background:#F5F0E8}
 #exportNameInput{width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:8px;margin-top:6px}
 footer.app-footer{text-align:center;color:var(--ink-soft);font-size:.78rem;padding:20px}sub{font-size:.7em}
+@media(max-width:820px){.practice-level-flow{grid-template-columns:1fr}.practice-level-arrow{transform:rotate(90deg);height:22px}.practice-level-card{padding-left:16px}}
 @media(max-width:720px){.card{padding:16px}.skeleton-canvas{height:300px}.lewis-stage{height:470px}.stage-wrap{min-height:470px}.tally-table th:nth-child(3){font-size:.7rem}.atom-block{width:150px;height:150px}.instruction-grid{grid-template-columns:1fr}.export-grid{grid-template-columns:1fr}.stability-shell.target-2{width:175px;height:175px}.stability-shell.target-8{width:235px;height:235px}}
 @media(max-width:430px){main{padding-left:8px;padding-right:8px}.card{padding:12px}.skeleton-canvas{height:280px}.lewis-stage{height:450px}.stage-wrap{min-height:450px;padding-left:0;padding-right:0}.atom-block{width:146px;height:146px}.atom-node{width:54px;height:54px}.electron-side{width:76px;height:44px;gap:8px}.electron-dot{width:28px;height:28px;min-width:28px;min-height:28px}.lp-N{top:0}.lp-E{left:100%}.lp-S{top:100%}.lp-W{left:0}.atom-count{top:calc(100% + 8px)}.stable-label{top:calc(100% + 32px)}.stability-shell.target-2{width:165px;height:165px}.stability-shell.target-8{width:225px;height:225px}.btn{padding:10px 14px}.progress-label{font-size:.65rem}.progress-trail{gap:4px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
@@ -154,7 +165,29 @@ footer.app-footer{text-align:center;color:var(--ink-soft);font-size:.78rem;paddi
   </div>
   <div class="card">
     <h3 style="margin-bottom:8px;">The 4 practice levels</h3>
-    <p style="color:var(--ink-soft); font-size:.92rem;">You'll move through 4 levels, each pulling a fresh molecule from a small bank so you can replay it later: <strong>Level 1</strong> single bonds, <strong>Level 2</strong> multi-atom single bonds, <strong>Level 3</strong> double bonds, and <strong>Level 4</strong> triple bonds. Same steps every time: tally → skeleton → place electrons → check duet/octet → explain your thinking. Once all 4 are done, exporting a report is optional.</p>
+    <p class="practice-level-intro">You'll move through 4 levels, each pulling a fresh molecule from a small bank so you can replay it later.</p>
+    <div class="practice-level-flow" aria-label="Four practice levels in order">
+      <div class="practice-level-card">
+        <span class="practice-level-number">Level 1</span>
+        <h4>Single bonds</h4>
+      </div>
+      <div class="practice-level-arrow" aria-hidden="true">→</div>
+      <div class="practice-level-card">
+        <span class="practice-level-number">Level 2</span>
+        <h4>Multi-atom single bonds</h4>
+      </div>
+      <div class="practice-level-arrow" aria-hidden="true">→</div>
+      <div class="practice-level-card">
+        <span class="practice-level-number">Level 3</span>
+        <h4>Double bonds</h4>
+      </div>
+      <div class="practice-level-arrow" aria-hidden="true">→</div>
+      <div class="practice-level-card">
+        <span class="practice-level-number">Level 4</span>
+        <h4>Triple bonds</h4>
+      </div>
+    </div>
+    <p class="practice-level-steps"><strong>Same steps every time:</strong> tally → skeleton → place electrons → check duet/octet → explain your thinking. Once all 4 are done, exporting a report is optional.</p>
     <div class="btn-row">
       <button class="btn btn-gold" id="btnStartPractice">Start practice →</button>
       <button class="btn btn-ghost no-print" id="btnRestartSession" style="display:none;">Start a new set</button>
@@ -1161,7 +1194,7 @@ function renderExport(){
           '<div class="fact-row"><span class="fact-label">Central atom(s)</span><span class="fact-value">'+escapeHtml(centralAtomText(r))+'</span></div>'+
           '<div class="fact-row"><span class="fact-label">Bond summary</span><span class="fact-value">'+escapeHtml(bondSummaryText(r))+'</span></div>'+
         '</div></section>'+
-        '<section class="export-panel"><h4>Final Lewis structure</h4><div class="export-structure">'+exportLewisMarkup(r)+'<div class="export-notation">'+structureText(r)+'</div></div></section>'+
+        '<section class="export-panel"><h4>Final Lewis structure</h4><div class="export-structure">'+exportLewisMarkup(r)+'</div></section>'+
         '<section class="export-panel"><h4>Your explanation</h4><div class="export-explanation">'+(r.reasoning?escapeHtml(r.reasoning):'<span class="export-empty">No explanation entered.</span>')+'</div></section>'+
       '</div>';
     host.appendChild(div);
@@ -1178,7 +1211,7 @@ function buildExportHTML(title){
           '<div class="fact-row"><span class="label">Central atom(s)</span><span class="value">'+escapeHtml(centralAtomText(r))+'</span></div>'+
           '<div class="fact-row"><span class="label">Bond summary</span><span class="value">'+escapeHtml(bondSummaryText(r))+'</span></div>'+
         '</div></section>'+
-        '<section class="panel"><h4>Final Lewis structure</h4><div class="structure">'+exportLewisMarkup(r)+'<div class="notation">'+structureText(r)+'</div></div></section>'+
+        '<section class="panel"><h4>Final Lewis structure</h4><div class="structure">'+exportLewisMarkup(r)+'</div></section>'+
         '<section class="panel"><h4>Your explanation</h4><div class="explanation">'+(r.reasoning?escapeHtml(r.reasoning):'<span class="empty">No explanation entered.</span>')+'</div></section>'+
       '</div></div>';
   });
