@@ -111,8 +111,8 @@ button.atom-node:hover{box-shadow:0 0 0 4px rgba(255,198,39,.18),0 1px 3px rgba(
 .atom-count.ok{color:var(--good);font-weight:700}.atom-count.under{color:var(--bad);font-weight:700}
 .stability-shell{position:absolute;transform:translate(-50%,-50%);border-radius:50%;pointer-events:none;z-index:1;border:4px solid rgba(60,110,113,.30);background:rgba(60,110,113,.06)}
 .stability-shell.h{border-color:rgba(140,29,64,.30);background:rgba(140,29,64,.06)}
-.stability-shell.target-2{width:190px;height:190px}
-.stability-shell.target-8{width:260px;height:260px}
+.stability-shell.target-2{width:184px;height:184px}
+.stability-shell.target-8{width:236px;height:236px}
 .stability-shell.hidden{display:none}
 .completion-hidden{display:none !important}
 .stable-label{position:absolute;left:50%;top:calc(100% + 18px);transform:translateX(-50%);font-size:.72rem;font-weight:700;color:var(--good);background:rgba(228,243,239,.98);padding:1px 8px;border-radius:999px;z-index:6;white-space:nowrap}
@@ -132,8 +132,8 @@ button.atom-node:hover{box-shadow:0 0 0 4px rgba(255,198,39,.18),0 1px 3px rgba(
 #exportNameInput{width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:8px;margin-top:6px}
 footer.app-footer{text-align:center;color:var(--ink-soft);font-size:.78rem;padding:20px}sub{font-size:.7em}
 @media(max-width:820px){.practice-level-flow{grid-template-columns:1fr}.practice-level-arrow{transform:rotate(90deg);height:22px}.practice-level-card{padding-left:16px}}
-@media(max-width:720px){.card{padding:16px}.skeleton-canvas{height:300px}.lewis-stage{height:470px}.stage-wrap{min-height:470px}.tally-table th:nth-child(3){font-size:.7rem}.atom-block{width:150px;height:150px}.instruction-grid{grid-template-columns:1fr}.export-grid{grid-template-columns:1fr}.stability-shell.target-2{width:175px;height:175px}.stability-shell.target-8{width:235px;height:235px}}
-@media(max-width:430px){main{padding-left:8px;padding-right:8px}.card{padding:12px}.skeleton-canvas{height:280px}.lewis-stage{height:450px}.stage-wrap{min-height:450px;padding-left:0;padding-right:0}.atom-block{width:146px;height:146px}.atom-node{width:54px;height:54px}.electron-side{width:76px;height:44px;gap:8px}.electron-dot{width:28px;height:28px;min-width:28px;min-height:28px}.lp-N{top:0}.lp-E{left:100%}.lp-S{top:100%}.lp-W{left:0}.atom-count{top:calc(100% + 8px)}.stable-label{top:calc(100% + 32px)}.stability-shell.target-2{width:165px;height:165px}.stability-shell.target-8{width:225px;height:225px}.btn{padding:10px 14px}.progress-label{font-size:.65rem}.progress-trail{gap:4px}}
+@media(max-width:720px){.card{padding:16px}.skeleton-canvas{height:300px}.lewis-stage{height:470px}.stage-wrap{min-height:470px}.tally-table th:nth-child(3){font-size:.7rem}.atom-block{width:150px;height:150px}.instruction-grid{grid-template-columns:1fr}.export-grid{grid-template-columns:1fr}.stability-shell.target-2{width:170px;height:170px}.stability-shell.target-8{width:214px;height:214px}}
+@media(max-width:430px){main{padding-left:8px;padding-right:8px}.card{padding:12px}.skeleton-canvas{height:280px}.lewis-stage{height:450px}.stage-wrap{min-height:450px;padding-left:0;padding-right:0}.atom-block{width:146px;height:146px}.atom-node{width:54px;height:54px}.electron-side{width:76px;height:44px;gap:8px}.electron-dot{width:28px;height:28px;min-width:28px;min-height:28px}.lp-N{top:0}.lp-E{left:100%}.lp-S{top:100%}.lp-W{left:0}.atom-count{top:calc(100% + 8px)}.stable-label{top:calc(100% + 32px)}.stability-shell.target-2{width:160px;height:160px}.stability-shell.target-8{width:206px;height:206px}.btn{padding:10px 14px}.progress-label{font-size:.65rem}.progress-trail{gap:4px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
 @media print{.app-header,.btn-row,.controls-row,.no-print,.progress-trail,.topnav{display:none!important}body{background:#fff}main{max-width:100%}.export-item{break-inside:avoid;page-break-inside:avoid}}
 
@@ -661,15 +661,11 @@ function occupiedDirections(uid,positions){
   return dirs;
 }
 function stabilityCenter(uid,positions){
-  const base={x:positions[uid].x,y:positions[uid].y};
-  const neighbors=state.chosenEdges.filter(([a,b])=>a===uid||b===uid).map(([a,b])=>a===uid?b:a);
-  if(!neighbors.length)return base;
-  let ax=0,ay=0;
-  neighbors.forEach(n=>{ax+=positions[n].x;ay+=positions[n].y;});
-  ax/=neighbors.length;ay/=neighbors.length;
-  const dx=ax-base.x,dy=ay-base.y,mag=Math.hypot(dx,dy)||1;
-  const shift=getAtom(uid).symbol==='H'?5:6;
-  return {x:base.x+(dx/mag)*shift,y:base.y+(dy/mag)*shift};
+  // Keep each stability shell centered on its own atom.
+  // The shell diameters already create the intended overlap across bonds.
+  // Shifting shells toward neighboring atoms makes the overlays merge too much,
+  // especially in H–C and C≡N structures.
+  return {x:positions[uid].x,y:positions[uid].y};
 }
 
 function updateBuildInstruction(){
