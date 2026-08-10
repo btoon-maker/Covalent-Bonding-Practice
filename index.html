@@ -86,8 +86,11 @@ main{max-width:940px;margin:0 auto;padding:20px 16px 60px}
 .multiple-bond-action:hover{border-color:var(--maroon);background:#FBEFF3}
 .multiple-bond-action.remove{color:var(--ink-soft)}
 .atom-block{position:absolute;transform:translate(-50%,-50%);width:170px;height:170px;z-index:3}
-.atom-node{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:60px;height:60px;border-radius:50%;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:1.05rem;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.atom-node{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:60px;height:60px;border-radius:50%;border:3px solid transparent;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:1.05rem;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:0}
 .atom-node.h{background:var(--maroon)}
+button.atom-node{cursor:pointer}
+button.atom-node:hover{box-shadow:0 0 0 4px rgba(255,198,39,.18),0 1px 3px rgba(0,0,0,.1)}
+.atom-node.build-selected{border-color:var(--gold);box-shadow:0 0 0 5px rgba(255,198,39,.28),0 1px 3px rgba(0,0,0,.1)}
 .electron-side{position:absolute;width:62px;height:34px;border:1.5px dashed #D5C9BA;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;gap:4px;padding:2px}
 .electron-side.has-electron{border-style:solid;border-color:#E4C66B;background:#FFF9E8}.electron-side.hidden{display:none}
 .electron-dot{width:24px;height:24px;min-width:24px;min-height:24px;border-radius:50%;border:2px solid #75695C;background:#fff;cursor:pointer;padding:0;flex:0 0 auto;touch-action:manipulation}
@@ -181,11 +184,10 @@ footer.app-footer{text-align:center;color:var(--ink-soft);font-size:.78rem;paddi
     <div class="phase-card" id="buildStep" style="display:none">
       <h3 class="phase-title" id="buildHeading" tabindex="-1">3. Use the remaining electrons to complete the Lewis structure</h3>
       <div class="electron-tally" id="electronTally"></div>
-      <p class="build-instruction">Place the remaining electrons <strong>one at a time</strong> by tapping the circles around each atom. Each side can hold up to 2 electrons. Put one electron on each open side of an atom before pairing electrons on a side. When the tally reaches 0, check the duet/octet counts. If an atom is still short, use the <strong>Add shared pair</strong> controls that appear below the structure to choose which bond should become double or triple. The faint overlapping circles show that a shared bond counts for <strong>both</strong> bonded atoms.</p>
-      <div class="selected-pair-note" id="selectedPairNote"></div>
-      <div class="stage-wrap"><div class="lewis-stage" id="lewisStage"></div></div>
-      <div id="multipleBondControls" class="multiple-bond-controls no-print" hidden aria-live="polite"></div>
-      <div class="controls-row no-print"><button class="btn btn-primary phase-lock" id="btnCheckStructure">Check my structure</button><button class="btn btn-ghost phase-lock" id="btnHint">💡 Hint</button><button class="btn btn-ghost phase-lock" id="btnPeriodicTable">Periodic table</button><button class="btn btn-ghost phase-lock" id="btnResetWorkspace">Reset this structure</button></div>
+      <p class="build-instruction" id="buildInstruction"></p>
+      <div class="selected-pair-note" id="selectedPairNote" aria-live="polite"></div>
+      <div class="stage-wrap"><div class="lewis-stage" id="lewisStage" role="group" aria-label="Lewis structure builder"></div></div>
+      <div class="controls-row no-print"><button class="btn btn-primary phase-lock" id="btnCheckStructure">Check my structure</button><button class="btn btn-ghost phase-lock" id="btnHint">💡 Hint</button><button class="btn btn-ghost phase-lock" id="btnPeriodicTable">Periodic table</button><button class="btn btn-ghost phase-lock" id="btnResetWorkspace">Reset to skeletal structure</button></div>
       <div id="feedbackBox" aria-live="polite"></div><div id="hintBox" class="hint-box" style="display:none"></div>
       <label for="reasonBox" style="display:block;margin-top:16px;font-weight:600;font-size:.9rem">Explain your structure</label>
       <textarea id="reasonBox" class="reason-box" placeholder="How did the electron tally help you decide where the electrons belonged? If you needed a multiple bond, how did you know?"></textarea>
@@ -272,6 +274,7 @@ function restoreCovalentSession(){
     usedFormulas=saved.usedFormulas||usedFormulas;
     results=saved.results||results;
     state=saved.state;
+    if(state.selectedBuild===undefined)state.selectedBuild=null;
     document.getElementById('levelBadge').textContent=LEVEL_TITLES[currentLevel];
     document.getElementById('level-heading').innerHTML=formulaDisplay(state.mol.formula);
     document.getElementById('molName').textContent=state.mol.name;
@@ -427,6 +430,7 @@ function makeState(mol){
     chosenEdges:[],
     selectedSkeleton:null,
     bondOrders:{},
+    selectedBuild:null,
     selectedLone:null,
     showStabilityOverlay:false,
     skeletonPositions:positions
@@ -616,9 +620,58 @@ function stabilityCenter(uid,positions){
   return {x:base.x+(dx/mag)*shift,y:base.y+(dy/mag)*shift};
 }
 
+function updateBuildInstruction(){
+  const el=document.getElementById('buildInstruction');
+  if(!el)return;
+  if(currentLevel>=3){
+    el.innerHTML='Place the remaining electrons <strong>one at a time</strong> by tapping the circles around each atom. Each side can hold up to 2 electrons. Put one electron on each open side before pairing electrons on a side. When the tally reaches 0, check the duet/octet counts. If an atom is still short, <strong>select one bonded atom, then select the atom it is already bonded to</strong>. Selecting the same bonded pair again converts available nonbonding electrons into another shared pair and adds another bond line. Repeat the same pair once more if a triple bond is needed. The total electron count does not change because the electrons are being rearranged, not added. The faint overlapping circles show that a shared bond counts for <strong>both</strong> bonded atoms.';
+  }else{
+    el.innerHTML='Place the remaining electrons <strong>one at a time</strong> by tapping the circles around each atom. Each side can hold up to 2 electrons. Put one electron on each open side before pairing electrons on a side. When the tally reaches 0, check the duet/octet counts. The faint overlapping circles show that a shared bond counts for <strong>both</strong> bonded atoms.';
+  }
+}
+function buildSelectionNote(){
+  const rem=remainingElectrons();
+  const under=state.atoms.find(a=>atomElectrons(a.uid)<targetElectrons(a));
+  if(currentLevel<3)return 'Each filled circle is one nonbonding electron. The faint overlapping circles show how each shared bond counts for both bonded atoms.';
+  if(rem>0)return 'Each filled circle is one nonbonding electron. Finish accounting for the remaining electrons before deciding whether another shared pair is needed.';
+  if(state.selectedBuild!==null)return accessibleAtomName(state.selectedBuild)+' selected. Now select an atom already bonded to it to add another shared pair between that pair.';
+  if(under)return 'All valence electrons are accounted for, but at least one atom is still short. Select one bonded atom, then the atom it is already bonded to, to try adding another shared pair.';
+  return 'All valence electrons are accounted for. Check each atom’s duet/octet before checking your structure.';
+}
+function buildAtomsCanAddBond(){
+  return currentLevel>=3 && remainingElectrons()===0 && !results[currentLevel] && state.phase==='build';
+}
+function handleBuildAtomClick(uid){
+  feedback('feedbackBox',null,'');
+  if(!buildAtomsCanAddBond())return;
+  if(state.selectedBuild===null){
+    state.selectedBuild=uid;
+    renderBuild();
+    requestAnimationFrame(()=>document.querySelector('[data-build-atom="'+uid+'"]')?.focus());
+    return;
+  }
+  if(state.selectedBuild===uid){
+    state.selectedBuild=null;
+    renderBuild();
+    requestAnimationFrame(()=>document.querySelector('[data-build-atom="'+uid+'"]')?.focus());
+    return;
+  }
+  const first=state.selectedBuild;
+  state.selectedBuild=null;
+  const connected=state.chosenEdges.some(([a,b])=>(a===first&&b===uid)||(a===uid&&b===first));
+  if(!connected){
+    feedback('feedbackBox','info',accessibleAtomName(first)+' and '+accessibleAtomName(uid)+' are not connected in the skeletal structure. To make a multiple bond, select two atoms that are already bonded to each other.');
+    renderBuild();
+    requestAnimationFrame(()=>document.querySelector('[data-build-atom="'+uid+'"]')?.focus());
+    return;
+  }
+  handleBondClick(first,uid);
+}
+
 function renderBuild(){
   renderTallyWidget('electronTally',state.totalValence,usedElectrons());
-  document.getElementById('selectedPairNote').textContent='Each filled circle is one nonbonding electron. The faint overlapping circles show how each shared bond counts for both bonded atoms.';
+  updateBuildInstruction();
+  document.getElementById('selectedPairNote').textContent=buildSelectionNote();
   const host=document.getElementById('lewisStage');
   host.innerHTML='';
   const positions=layoutPositions();
@@ -653,20 +706,30 @@ function renderBuild(){
     wrap.style.top=sy+'px';
     wrap.style.width=len+'px';
     wrap.style.transform='translateY(-50%) rotate('+ang+'deg)';
-    const btn=document.createElement('button');
+    const line=document.createElement('div');
     const order=bondOrder(a,b);
-    btn.className='bond-control order-'+order;
-    btn.setAttribute('aria-label',(order===1?'Single':order===2?'Double':'Triple')+' bond between '+accessibleAtomName(a)+' and '+accessibleAtomName(b)+'. Activate to add or remove a shared pair when allowed.');
-    btn.addEventListener('click',()=>handleBondClick(a,b));
-    wrap.appendChild(btn);host.appendChild(wrap);
+    line.className='bond-control order-'+order;
+    line.setAttribute('aria-hidden','true');
+    wrap.setAttribute('role','img');
+    wrap.setAttribute('aria-label',(order===1?'Single':order===2?'Double':'Triple')+' bond between '+accessibleAtomName(a)+' and '+accessibleAtomName(b));
+    wrap.appendChild(line);host.appendChild(wrap);
   });
 
   state.atoms.forEach(atom=>{
     const p=positions[atom.uid];
     const block=document.createElement('div');
     block.className='atom-block';block.style.left=p.x+'%';block.style.top=p.y+'%';
-    const node=document.createElement('div');
-    node.className='atom-node'+(atom.symbol==='H'?' h':'');node.textContent=atom.symbol;block.appendChild(node);
+    const canSelect=buildAtomsCanAddBond();
+    const node=document.createElement(canSelect?'button':'div');
+    if(canSelect){
+      node.type='button';
+      node.dataset.buildAtom=atom.uid;
+      node.setAttribute('aria-pressed',state.selectedBuild===atom.uid?'true':'false');
+      node.setAttribute('aria-label',accessibleAtomName(atom.uid)+(state.selectedBuild===atom.uid?', selected. Select it again to cancel selection.':'. Select this atom, then an already bonded atom, to add another shared pair.'));
+      node.addEventListener('click',()=>handleBuildAtomClick(atom.uid));
+    }
+    node.className='atom-node'+(atom.symbol==='H'?' h':'')+(state.selectedBuild===atom.uid?' build-selected':'');
+    node.textContent=atom.symbol;block.appendChild(node);
     const occupied=occupiedDirections(atom.uid,positions);
     DIRS.forEach(dir=>{
       const allowed=atom.symbol!=='H'&&!occupied.has(dir);
@@ -701,7 +764,8 @@ function renderBuild(){
     }
     host.appendChild(block);
   });
-  renderMultipleBondControls();
+  const oldControls=document.getElementById('multipleBondControls');
+  if(oldControls){oldControls.hidden=true;oldControls.innerHTML='';}
   saveCovalentSession();
 }
 function bondLabel(a,b,order){
@@ -777,7 +841,7 @@ function handleElectronClick(uid,dir,index,allowed){
   }
   if(current>=2)return;
   if(remainingElectrons()<=0){
-    feedback('feedbackBox','bad','All valence electrons are already accounted for. Check the duet/octet counts. If an atom is still short, use the Add shared pair controls below the structure.');
+    feedback('feedbackBox','bad','All valence electrons are already accounted for. Check the duet/octet counts. If an atom is still short, select one bonded atom and then the atom it is already bonded to to create another shared pair.');
     return;
   }
   if(current===1){
@@ -804,7 +868,7 @@ function handleBondClick(a,b){
   feedback('feedbackBox',null,'');
   const order=bondOrder(a,b);
   if(order>=3){
-    feedback('feedbackBox','info','This is already a triple bond. Tap Reset if you need to rebuild the structure.');
+    feedback('feedbackBox','info','This is already a triple bond. Use Reset to skeletal structure if you need to rebuild from the single-bond skeleton.');
     return;
   }
   if(remainingElectrons()>0){
@@ -815,14 +879,13 @@ function handleBondClick(a,b){
   const needA=Math.max(0,targetElectrons(atomA)-atomElectrons(a));
   const needB=Math.max(0,targetElectrons(atomB)-atomElectrons(b));
   if(needA===0&&needB===0){
-    if(order>1){
-      state.bondOrders[edgeKey(a,b)]=order-1;
-      state.showStabilityOverlay=false;
-      feedback('feedbackBox','info','One shared pair was removed from this multiple bond. Those 2 electrons are available again in the tally so you can redistribute them.');
-      renderBuild();
-      return;
-    }
-    feedback('feedbackBox','info','Both atoms already have their required outer-shell electron counts. This bond does not need another shared pair.');
+    feedback('feedbackBox','info','Both atoms already have their required outer-shell electron counts. This bond does not need another shared pair. Use Reset to skeletal structure if you want to rebuild.');
+    renderBuild();
+    return;
+  }
+  if((atomA.symbol==='H'||atomB.symbol==='H') && order>=1){
+    feedback('feedbackBox','info','Hydrogen is already complete with one bond and a duet, so this bonded pair cannot gain another shared pair.');
+    renderBuild();
     return;
   }
 
@@ -865,8 +928,9 @@ function resetBuild(){
   state.bondOrders={};
   state.chosenEdges.forEach(([a,b])=>state.bondOrders[edgeKey(a,b)]=1);
   state.selectedLone=null;
+  state.selectedBuild=null;
   state.showStabilityOverlay=false;
-  feedback('feedbackBox',null,'');
+  feedback('feedbackBox','info','Returned to the single-bond skeletal structure. Place the remaining electrons again.');
   document.getElementById('hintBox').style.display='none';
   renderBuild();
 }
@@ -887,7 +951,7 @@ function checkStructure(){
   }
   const under=state.atoms.find(a=>atomElectrons(a.uid)<targetElectrons(a));
   if(under){
-    feedback('feedbackBox','info',under.symbol+' has '+atomElectrons(under.uid)+' electrons around it but needs '+targetElectrons(under)+'. All valence electrons are accounted for. Look for unpaired electrons on bonded atoms or nonbonding electrons that can become another shared pair; then use the Add shared pair control for the bond that should become double or triple.');
+    feedback('feedbackBox','info',under.symbol+' has '+atomElectrons(under.uid)+' electrons around it but needs '+targetElectrons(under)+'. All valence electrons are accounted for. Look for nonbonding electrons that can become another shared pair. Select one atom in the bond, then select the atom it is already bonded to. Selecting that bonded pair again adds another bond line when the electron arrangement supports it.');
     return;
   }
   const unpaired=state.atoms.find(a=>DIRS.some(d=>(a.lone[d]||0)===1));
@@ -895,6 +959,7 @@ function checkStructure(){
     feedback('feedbackBox','info',unpaired.symbol+' still has an unpaired nonbonding electron. In the molecules used in this practice, the finished Lewis structure should pair those electrons through a lone pair or an additional shared bond.');
     return;
   }
+  state.selectedBuild=null;
   state.showStabilityOverlay=true;
   renderBuild();
   feedback('feedbackBox','good','Correct Lewis structure. Every valence electron is accounted for, and each atom has the appropriate duet or octet.');
@@ -1035,7 +1100,7 @@ document.getElementById('btnHint').addEventListener('click',()=>{
   if(remainingElectrons()>0)text='You still have electrons available. Place them one at a time, usually on terminal atoms first. Put one electron on each open side of an atom before pairing, and keep hydrogen to a duet.';
   else{
     const under=state.atoms.find(a=>atomElectrons(a.uid)<targetElectrons(a));
-    text=under?'All electrons are accounted for, but '+under.symbol+' is still short. Look for singly placed electrons on the bonded atoms or a neighboring lone pair that can become another shared pair, then use the Add shared pair control for that bond.':'Use the electron counts shown under each atom to check the duet/octet and the tally above to verify the total.';
+    text=under?'All electrons are accounted for, but '+under.symbol+' is still short. Look for singly placed electrons on bonded atoms or a neighboring lone pair that can become another shared pair. Select one atom in that bond, then select the atom it is already bonded to. For a triple bond, repeat the same bonded pair again if another shared pair is still needed.':'Use the electron counts shown under each atom to check the duet/octet and the tally above to verify the total.';
   }
   if(box.style.display==='none'||!box.style.display){box.innerHTML='<span aria-hidden="true">💡</span><span>'+text+'</span>';box.style.display='flex'}
   else box.style.display='none';
