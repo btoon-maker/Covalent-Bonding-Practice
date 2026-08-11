@@ -1304,9 +1304,9 @@ function layoutResultPositions(r){
   return pos;
 }
 function exportLewisMarkup(r){
-  const pos=layoutResultPositions(r), width=420, height=240, atomRadius=24;
+  const pos=layoutResultPositions(r), width=420, drawingHeight=240, height=280, yPad=20, atomRadius=24;
   const parts=[];
-  function toXY(p){return {x:p.x*width/100,y:p.y*height/100};}
+  function toXY(p){return {x:p.x*width/100,y:yPad+(p.y*drawingHeight/100)};}
   r.edges.forEach(([a,b])=>{
     const p1=toXY(pos[a]), p2=toXY(pos[b]);
     const dx=p2.x-p1.x, dy=p2.y-p1.y, len=Math.hypot(dx,dy)||1;
@@ -1337,7 +1337,7 @@ function exportLewisMarkup(r){
     parts.push('<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="'+atomRadius+'" fill="'+pal.fill+'"/>');
     parts.push('<text x="'+p.x.toFixed(1)+'" y="'+(p.y+5).toFixed(1)+'" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="18" font-weight="700" fill="'+pal.text+'">'+sym.replace(/&/g,'&amp;')+'</text>');
   });
-  return '<svg viewBox="0 0 420 240" role="img" aria-label="Final Lewis structure for '+r.formula+'" style="width:100%;max-width:420px;height:auto">'+parts.join('')+'</svg>';
+  return '<svg viewBox="0 0 420 280" role="img" aria-label="Final Lewis structure for '+r.formula+'" style="width:100%;max-width:420px;height:auto">'+parts.join('')+'</svg>';
 }
 
 function structureText(r){
